@@ -1,16 +1,33 @@
 import { PrismaClient } from "@prisma/client";
 import { Router, Request, Response } from "express";
 import jwt from "jsonwebtoken";
+import { createPresignedPost } from '@aws-sdk/s3-presigned-post'
 import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { JWT_SECRET } from "..";
 import { authMiddleware } from "../middleware";
+import dotenv from "dotenv";
+dotenv.config();
 
 const router = Router();
 const prisma = new PrismaClient();
 
+if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY || !process.env.AWS_REGION) {
+    throw new Error("Missing AWS environment variables");
+  }
 
-const s3Client = new S3Client()
+
+const s3Client = new S3Client({
+   credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+   },
+   region: process.env.AWS_REGION
+});
+
+console.log("AWS_ACCESS_KEY_ID:", process.env.AWS_ACCESS_KEY_ID);
+console.log("AWS_SECRET_ACCESS_KEY:", process.env.AWS_SECRET_ACCESS_KEY ? "HIDDEN" : "NOT SET");
+console.log("AWS_REGION:", process.env.AWS_REGION);
 
 
 
@@ -52,20 +69,30 @@ router.post("/signin", async(req, res)=>{
 
 });
 
-
-router.get("/presignedUrl", authMiddleware, async (req: Request, res: Response): Promise<void> => { 
+//@ts-ignore
+router.get("/presignedUrl", authMiddleware, async (req, res) => { 
     //@ts-ignore
     const userId = req.userId;
-    const command = new PutObjectCommand({
-        Bucket: "decentralized-fiver",
-        Key: `/fiver/${userId}/${}`,
-      })
-
-
+    
       
-const preSignedUrl = await getSignedUrl(s3Client, command, {
-    expiresIn: 3600
-  })
+      const { url, fields } = await createPresignedPost(s3Client, {
+        Bucket: 'decentralized-fiver',
+        Key: `/fiver/${userId}/${Math.random()}/image.jpg`,
+        Conditions: [
+          ['content-length-range', 0, 5 * 1024 * 1024] // 5 MB max
+        ],
+        Fields: {
+          success_action_status: '201',
+          'Content-Type': 'image/png'
+        },
+        Expires: 3600
+      })
+      
+      console.log({ url, fields })
+    res.json({
+        preSignedUrl : url ,
+        fields
+    })
 });
 
 export default router;

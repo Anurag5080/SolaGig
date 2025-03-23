@@ -11,10 +11,12 @@
   "license": "ISC",
   "dependencies": {
     "@aws-sdk/client-s3": "^3.772.0",
+    "@aws-sdk/s3-presigned-post": "^3.772.0",
     "@aws-sdk/s3-request-presigner": "^3.772.0",
     "@prisma/client": "^6.5.0",
     "@types/express": "^5.0.1",
     "@types/jsonwebtoken": "^9.0.9",
+    "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
     "prisma": "^6.5.0"

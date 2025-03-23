@@ -15,9 +15,27 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const client_1 = require("@prisma/client");
 const express_1 = require("express");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const s3_presigned_post_1 = require("@aws-sdk/s3-presigned-post");
+const client_s3_1 = require("@aws-sdk/client-s3");
+const __1 = require("..");
+const middleware_1 = require("../middleware");
+const dotenv_1 = __importDefault(require("dotenv"));
+dotenv_1.default.config();
 const router = (0, express_1.Router)();
 const prisma = new client_1.PrismaClient();
-const JWT_SECRET = "secret";
+if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY || !process.env.AWS_REGION) {
+    throw new Error("Missing AWS environment variables");
+}
+const s3Client = new client_s3_1.S3Client({
+    credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+    },
+    region: process.env.AWS_REGION
+});
+console.log("AWS_ACCESS_KEY_ID:", process.env.AWS_ACCESS_KEY_ID);
+console.log("AWS_SECRET_ACCESS_KEY:", process.env.AWS_SECRET_ACCESS_KEY ? "HIDDEN" : "NOT SET");
+console.log("AWS_REGION:", process.env.AWS_REGION);
 //we sign in with a wallet adapter
 //sign in wth a msgg
 router.post("/signin", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -31,7 +49,7 @@ router.post("/signin", (req, res) => __awaiter(void 0, void 0, void 0, function*
     if (existingUser) {
         const token = jsonwebtoken_1.default.sign({
             userId: existingUser.id
-        }, JWT_SECRET);
+        }, __1.JWT_SECRET);
         res.json({
             token
         });
@@ -44,10 +62,32 @@ router.post("/signin", (req, res) => __awaiter(void 0, void 0, void 0, function*
         });
         const token = jsonwebtoken_1.default.sign({
             userId: user.id
-        }, JWT_SECRET);
+        }, __1.JWT_SECRET);
         res.json({
             token
         });
     }
+}));
+//@ts-ignore
+router.get("/presignedUrl", middleware_1.authMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    //@ts-ignore
+    const userId = req.userId;
+    const { url, fields } = yield (0, s3_presigned_post_1.createPresignedPost)(s3Client, {
+        Bucket: 'decentralized-fiver',
+        Key: `/fiver/${userId}/${Math.random()}/image.jpg`,
+        Conditions: [
+            ['content-length-range', 0, 5 * 1024 * 1024] // 5 MB max
+        ],
+        Fields: {
+            success_action_status: '201',
+            'Content-Type': 'image/png'
+        },
+        Expires: 3600
+    });
+    console.log({ url, fields });
+    res.json({
+        preSignedUrl: url,
+        fields
+    });
 }));
 exports.default = router;
