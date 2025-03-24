@@ -20,6 +20,7 @@ const client_s3_1 = require("@aws-sdk/client-s3");
 const __1 = require("..");
 const middleware_1 = require("../middleware");
 const dotenv_1 = __importDefault(require("dotenv"));
+const types_1 = require("../types");
 dotenv_1.default.config();
 const router = (0, express_1.Router)();
 const prisma = new client_1.PrismaClient();
@@ -36,6 +37,40 @@ const s3Client = new client_s3_1.S3Client({
 console.log("AWS_ACCESS_KEY_ID:", process.env.AWS_ACCESS_KEY_ID);
 console.log("AWS_SECRET_ACCESS_KEY:", process.env.AWS_SECRET_ACCESS_KEY ? "HIDDEN" : "NOT SET");
 console.log("AWS_REGION:", process.env.AWS_REGION);
+//task route
+//@ts-ignore
+router.post("/task", middleware_1.authMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    //@ts-ignore
+    const userId = req.userId;
+    const body = req.body;
+    const parsedData = types_1.createTaskInput.safeParse(body);
+    if (!parsedData.success) {
+        return res.status(411).json({
+            message: "Invalid input"
+        });
+    }
+    //paerse the signatuer here to ensure the person paid thj money
+    let resopnse = yield prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
+        const transactionResponce = yield tx.task.create({
+            data: {
+                title: parsedData.data.title,
+                amount: "1",
+                signature: parsedData.data.signature,
+                user_id: userId,
+            }
+        });
+        yield tx.options.createMany({
+            data: parsedData.data.options.map(x => ({
+                image_url: x.imageUrl,
+                task_id: transactionResponce.id
+            }))
+        });
+        return transactionResponce;
+    }));
+    res.json({
+        id: resopnse.id
+    });
+}));
 //we sign in with a wallet adapter
 //sign in wth a msgg
 router.post("/signin", (req, res) => __awaiter(void 0, void 0, void 0, function* () {

@@ -11,7 +11,6 @@ function authMiddleware(req, res, next) {
     const authHeader = (_a = req.headers["authorization"]) !== null && _a !== void 0 ? _a : "";
     try {
         const decode = jsonwebtoken_1.default.verify(authHeader, _1.JWT_SECRET);
-        // @ts-ignore
         if (decode.userId) {
             // @ts-ignore
             req.userId = decode.userId;
