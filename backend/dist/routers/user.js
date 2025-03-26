@@ -34,9 +34,52 @@ const s3Client = new client_s3_1.S3Client({
     },
     region: process.env.AWS_REGION
 });
-console.log("AWS_ACCESS_KEY_ID:", process.env.AWS_ACCESS_KEY_ID);
-console.log("AWS_SECRET_ACCESS_KEY:", process.env.AWS_SECRET_ACCESS_KEY ? "HIDDEN" : "NOT SET");
-console.log("AWS_REGION:", process.env.AWS_REGION);
+//@ts-ignore
+router.get("/task", middleware_1.authMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const taskId = req.query.taskId;
+    //@ts-ignore
+    const userId = req.userId;
+    const taskDetails = yield prisma.task.findFirst({
+        where: {
+            user_id: Number(userId),
+            id: Number(taskId)
+        },
+        include: {
+            options: true
+        }
+    });
+    if (!taskDetails) {
+        return res.status(411).json({
+            message: "You don't hace access to this task"
+        });
+    }
+    const response = yield prisma.submission.findMany({
+        where: {
+            task_id: Number(taskId)
+        },
+        include: {
+            option: true
+        }
+    });
+    // Creates a record of all options with their counts
+    // First initializes all options with count 0
+    // Then counts actual submissions for each option
+    const result = {};
+    // Initialize counts for all options
+    taskDetails.options.forEach(option => {
+        result[option.id] = {
+            count: 0,
+            option: {
+                imageUrl: option.image_url
+            }
+        };
+    });
+    // Count submissions for each option
+    response.forEach(r => {
+        result[r.option_id].count += 1;
+    });
+    res.json({ result });
+}));
 //task route
 //@ts-ignore
 router.post("/task", middleware_1.authMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {

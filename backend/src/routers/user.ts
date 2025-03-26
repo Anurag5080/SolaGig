@@ -27,9 +27,6 @@ const s3Client = new S3Client({
    region: process.env.AWS_REGION
 });
 
-console.log("AWS_ACCESS_KEY_ID:", process.env.AWS_ACCESS_KEY_ID);
-console.log("AWS_SECRET_ACCESS_KEY:", process.env.AWS_SECRET_ACCESS_KEY ? "HIDDEN" : "NOT SET");
-console.log("AWS_REGION:", process.env.AWS_REGION);
 
 //@ts-ignore
 router.get("/task",authMiddleware,  async(req, res) => {
@@ -42,9 +39,14 @@ router.get("/task",authMiddleware,  async(req, res) => {
             where:{
                 user_id: Number(userId),
                 id: Number(taskId)
+            },
+            include:{
+                options: true
             }
         }
     )
+
+
 
     if(!taskDetails){
         return res.status(411).json({
@@ -60,26 +62,30 @@ router.get("/task",authMiddleware,  async(req, res) => {
             option: true
         }
     });
+    // Creates a record of all options with their counts
+// First initializes all options with count 0
+// Then counts actual submissions for each option
 
-    const result :Record<string, {
-        count : number;
-        task:{
+    const result: Record<string, {
+        count: number;
+        option: {
             imageUrl: string;
         }
-    }>  = {};
+    }> = {};
 
-    response.forEach(r =>{
-        if(!result[r.option_id]){
-            result[r.option_id] = {
-                count : 1,
-                task:{
-                    imageUrl: r.option.image_url
-                }
-            }
+    // Initialize counts for all options
+    taskDetails.options.forEach(option => {
+        result[option.id] = {
+            count: 0,
+            option: {
+                imageUrl: option.image_url
+            }       
         }
-        else{
-            result[r.option_id].count +=1;
-        }
+    });
+
+    // Count submissions for each option
+    response.forEach(r => {
+        result[r.option_id].count += 1;
     });
 
     res.json({result});
