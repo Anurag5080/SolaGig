@@ -17,14 +17,15 @@ model User{
   id    Int    @id @default(autoincrement())
   address String   @unique
   tasks     Task[]
+  payouts   Payouts[]
 }
 
 model Worker{
   id    Int    @id @default(autoincrement())
   address String   @unique
   submissions Submission[]
-  pending_ammont Int
-  locked_amount Int
+  pending_ammont Decimal
+  locked_amount Decimal
 }
 
 
@@ -62,4 +63,22 @@ model Submission{
   amount     String
   @@unique([worker_id, task_id]) //every submission is unique
 }
+
+
+model Payouts{
+  id        Int     @id @default(autoincrement())
+  user_id   Int
+  user      User    @relation(fields: [user_id], references: [id])
+  amount    Int
+  signature  String
+  status   TnxStatus
+
+}
+
+enum TnxStatus{
+  Processing
+  Success 
+  Failure
+}
+
 

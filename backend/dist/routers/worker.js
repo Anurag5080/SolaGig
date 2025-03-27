@@ -12,17 +12,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.WORKER_JWT_SECRET = void 0;
 const client_1 = require("@prisma/client");
 const express_1 = require("express");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const __1 = require("..");
+const config_1 = require("../config");
 const middleware_1 = require("../middleware");
 const db_1 = require("../db");
 const types_1 = require("../types");
 const router = (0, express_1.Router)();
 const prisma = new client_1.PrismaClient();
-exports.WORKER_JWT_SECRET = __1.JWT_SECRET + "WORKER";
 const TOTAL_SUBMISSIONS = 10;
 router.post("/signin", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     //sign in verification logic
@@ -35,7 +33,7 @@ router.post("/signin", (req, res) => __awaiter(void 0, void 0, void 0, function*
     if (existingUser) {
         const token = jsonwebtoken_1.default.sign({
             userId: existingUser.id
-        }, exports.WORKER_JWT_SECRET);
+        }, config_1.WORKER_JWT_SECRET);
         res.json({
             token
         });
@@ -50,7 +48,7 @@ router.post("/signin", (req, res) => __awaiter(void 0, void 0, void 0, function*
         });
         const token = jsonwebtoken_1.default.sign({
             userId: user.id
-        }, exports.WORKER_JWT_SECRET);
+        }, config_1.WORKER_JWT_SECRET);
         res.json({
             token
         });
@@ -69,7 +67,7 @@ router.get("/nextTask", middleware_1.workerMiddleware, (req, res) => __awaiter(v
         });
     }
     else {
-        res.status(411).json({
+        res.status(200).json({
             task
         });
     }
@@ -87,7 +85,8 @@ router.post("/submission", middleware_1.workerMiddleware, (req, res) => __awaite
                 message: "Invalid task id"
             });
         }
-        const amount = (Number(task.amount) / TOTAL_SUBMISSIONS).toString();
+        console.log(parsedData);
+        const amount = (Number(task.amount) * 10000 / TOTAL_SUBMISSIONS).toString();
         const submission = yield prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
             const submission = yield tx.submission.create({
                 data: {
@@ -128,6 +127,51 @@ router.get("/balance", middleware_1.workerMiddleware, (req, res) => __awaiter(vo
     res.json({
         pendingAmount: worker === null || worker === void 0 ? void 0 : worker.pending_ammont,
         lockedAmount: worker === null || worker === void 0 ? void 0 : worker.locked_amount,
+    });
+}));
+//@ts-ignore
+router.post("/payout", middleware_1.workerMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    //@ts-ignore
+    const userId = req.userId;
+    const worker = yield prisma.worker.findFirst({
+        where: {
+            id: userId
+        }
+    });
+    if (!worker) {
+        res.status(403).json({
+            message: "Worker Not Found"
+        });
+    }
+    const address = worker === null || worker === void 0 ? void 0 : worker.address;
+    const tnxId = "0x1222122550";
+    //sending all the transction to blockchain
+    yield prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
+        yield tx.worker.update({
+            where: {
+                id: userId
+            },
+            data: {
+                pending_ammont: {
+                    decrement: worker === null || worker === void 0 ? void 0 : worker.pending_ammont
+                },
+                locked_amount: {
+                    increment: worker === null || worker === void 0 ? void 0 : worker.pending_ammont
+                }
+            }
+        });
+        yield tx.payouts.create({
+            data: {
+                user_id: Number(userId),
+                amount: Number(worker === null || worker === void 0 ? void 0 : worker.pending_ammont),
+                status: "Processing",
+                signature: tnxId
+            }
+        });
+    }));
+    res.json({
+        message: "Processing Payment",
+        amount: worker === null || worker === void 0 ? void 0 : worker.pending_ammont
     });
 }));
 exports.default = router;

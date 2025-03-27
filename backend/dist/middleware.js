@@ -6,13 +6,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.authMiddleware = authMiddleware;
 exports.workerMiddleware = workerMiddleware;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const _1 = require(".");
-const worker_1 = require("./routers/worker");
+const config_1 = require("./config");
+const config_2 = require("./config");
 function authMiddleware(req, res, next) {
     var _a;
     const authHeader = (_a = req.headers["authorization"]) !== null && _a !== void 0 ? _a : "";
     try {
-        const decode = jsonwebtoken_1.default.verify(authHeader, _1.JWT_SECRET);
+        const decode = jsonwebtoken_1.default.verify(authHeader, config_1.JWT_SECRET);
         if (decode.userId) {
             // @ts-ignore
             req.userId = decode.userId;
@@ -35,7 +35,7 @@ function workerMiddleware(req, res, next) {
     var _a;
     const authHeader = (_a = req.headers["authorization"]) !== null && _a !== void 0 ? _a : "";
     try {
-        const decode = jsonwebtoken_1.default.verify(authHeader, worker_1.WORKER_JWT_SECRET);
+        const decode = jsonwebtoken_1.default.verify(authHeader, config_2.WORKER_JWT_SECRET);
         if (decode.userId) {
             // @ts-ignore
             req.userId = decode.userId;

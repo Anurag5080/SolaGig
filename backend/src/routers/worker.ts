@@ -1,14 +1,14 @@
 import { PrismaClient } from "@prisma/client";
 import { Router, Request, Response, response } from "express";
 import jwt, { sign } from "jsonwebtoken";
-import { JWT_SECRET } from "..";
+import { JWT_SECRET, WORKER_JWT_SECRET } from "../config";
 import { workerMiddleware } from "../middleware";
 import { getNewTask } from "../db";
 import { createSubmissionInput } from "../types";
+import { warnOnce } from "@prisma/client/runtime/library";
 
 const router = Router();
 const prisma = new PrismaClient();
-export const WORKER_JWT_SECRET  = JWT_SECRET + "WORKER";
 const TOTAL_SUBMISSIONS = 10;
 
 
@@ -65,7 +65,7 @@ router.get("/nextTask", workerMiddleware, async(req, res)=>{
             message: "No tasks available for review"
         })
     }else{
-        res.status(411).json({
+        res.status(200).json({
             task
         })
     }
@@ -88,7 +88,9 @@ router.post("/submission", workerMiddleware, async(req, res)=>{
             })
         }
 
-        const amount  = (Number(task.amount )/ TOTAL_SUBMISSIONS).toString();
+        console.log(parsedData)
+
+        const amount  = (Number(task.amount ) * 10000/ TOTAL_SUBMISSIONS).toString();
 
         const submission  =await prisma.$transaction(async tx =>{
             const submission = await tx.submission.create({
@@ -143,6 +145,60 @@ router.get("/balance", workerMiddleware, async(req, res) =>{
             lockedAmount : worker?.locked_amount,
         })
     })
+
+//@ts-ignore
+router.post("/payout", workerMiddleware, async(req, res) =>{
+//@ts-ignore
+    const userId = req.userId,
+    const worker = await prisma.worker.findFirst({
+        where:{
+            id: userId
+        }
+    })
+
+    if(!worker){
+        res.status(403).json({
+            message: "Worker Not Found"
+        })
+    }
+
+    const address = worker?.address;
+    const tnxId = "0x1222122550";
+
+    //sending all the transction to blockchain
+    await prisma.$transaction(async tx=>{
+        await tx.worker.update({
+            where:{
+                id: userId
+            },
+            data:{
+                pending_ammont:{
+                    decrement: worker?.pending_ammont
+                },
+                locked_amount:{
+                    increment: worker?.pending_ammont
+                }
+            }
+        })
+
+        await tx.payouts.create({
+            data:{
+                user_id : Number(userId),
+                amount: Number(worker?.pending_ammont),
+                status: "Processing",
+                signature: tnxId
+
+            }
+        })
+    })
+
+    res.json({
+        message: "Processing Payment",
+        amount: worker?.pending_ammont
+    })
+
+
+})    
     
     
     
