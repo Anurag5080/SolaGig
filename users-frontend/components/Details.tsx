@@ -2,10 +2,38 @@
 
 import { useState } from "react";
 import { Uploads } from "./Uploads";
+import axios from 'axios'
+import {  useRouter } from "next/navigation";
+import { BackendUrl } from "@/utils";
+
+
 
 export const Details =()=>{
     const [title, setTitle] = useState("");
     const [images, setImages] = useState<string []>([]);
+    const [txSignature, setTxSignature] = useState("");
+    const router = useRouter();
+
+    async function onSubmit() {
+        const reponse= await axios.post(`${BackendUrl}/v1/user/task`, {
+            options: images.map(image =>({
+                imageUrl: image
+            })),
+            title,
+            signature: txSignature
+        }, {
+            headers:{
+                "Authorization" : localStorage.getItem("token")                
+            }
+        })
+
+        router.push(`/task/${reponse.data.id}`)
+        
+    }
+
+    async function makePayment(){
+
+    }
 
 
     return(
@@ -38,8 +66,10 @@ export const Details =()=>{
             <div className="flex justify-center">
                 <button
                 className="mt-4 text-white bg-gray-800 hover:bg-gray-900 focus:outline-none focus:ring-4 focus:ring-gray-300 font-medium rounded-full text-sm px-5 py-2.5 me-2 mb-2 dark:bg-gray-800 dark:hover:bg-gray-700 dark:focus:ring-gray-700 dark:border-gray-700"
+                type="button"
+                onClick={txSignature? onSubmit : makePayment}
                 >
-                    Submit
+                    {txSignature? "Submit Task" : "Pay 0.1 Sol"}
                 </button>
             </div>
         </div>
