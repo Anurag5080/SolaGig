@@ -12,6 +12,6 @@ app.use(express_1.default.json());
 app.use((0, cors_1.default)());
 app.use("/v1/user", user_1.default);
 app.use("/v1/worker", worker_1.default);
-app.listen(3001, () => {
-    console.log('Server is running on port 3001');
+app.listen(3002, () => {
+    console.log('Server is running on port 3002');
 });

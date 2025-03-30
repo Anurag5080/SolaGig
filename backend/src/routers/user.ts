@@ -182,14 +182,14 @@ router.get("/presignedUrl", authMiddleware, async (req, res) => {
         ],
         Fields: {
           success_action_status: '201',
-          'Content-Type': 'image/png'
+          'Content-Type': 'image/jpg'
         },
         Expires: 3600
       })
       
       console.log({ url, fields })
     res.json({
-        preSignedUrl : url ,
+        presignedUrl : url ,
         fields
     })
 });

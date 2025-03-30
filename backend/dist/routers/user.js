@@ -158,13 +158,13 @@ router.get("/presignedUrl", middleware_1.authMiddleware, (req, res) => __awaiter
         ],
         Fields: {
             success_action_status: '201',
-            'Content-Type': 'image/png'
+            'Content-Type': 'image/jpg'
         },
         Expires: 3600
     });
     console.log({ url, fields });
     res.json({
-        preSignedUrl: url,
+        presignedUrl: url,
         fields
     });
 }));

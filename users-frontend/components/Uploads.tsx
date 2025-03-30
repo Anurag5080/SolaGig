@@ -25,14 +25,13 @@ export function Uploads({onImageAdded, image} : {
             formData.set("bucket", response.data.fields["bucket"])
             formData.set("X-Amz-Algorithm", response.data.fields["X-Amz-Algorithm"]);
             formData.set("X-Amz-Credential", response.data.fields["X-Amz-Credential"]);
-            formData.set("X-Amz-Algorithm", response.data.fields["X-Amz-Algorithm"]);
             formData.set("X-Amz-Date", response.data.fields["X-Amz-Date"]);
             formData.set("key", response.data.fields["key"]);
             formData.set("Policy", response.data.fields["Policy"]);
             formData.set("X-Amz-Signature", response.data.fields["X-Amz-Signature"]);
-            formData.set("X-Amz-Algorithm", response.data.fields["X-Amz-Algorithm"]);
             formData.append("file", file);
-
+            
+            const s3AxiosInstance = axios.create();
             const awsresponse= await axios.post(presignedUrl, formData);
             if (onImageAdded) {
                 onImageAdded(`${CloudFront_Url}/${response.data.fields["key"]}`);

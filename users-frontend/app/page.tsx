@@ -10,8 +10,7 @@ export default function Home() {
       <Appbar />
       <Hero />
       <Details />
-      <Uploads />
-    </div>
+      </div>
     
     
     
