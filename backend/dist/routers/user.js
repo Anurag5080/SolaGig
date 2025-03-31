@@ -150,22 +150,27 @@ router.post("/signin", (req, res) => __awaiter(void 0, void 0, void 0, function*
 router.get("/presignedUrl", middleware_1.authMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     //@ts-ignore
     const userId = req.userId;
-    const { url, fields } = yield (0, s3_presigned_post_1.createPresignedPost)(s3Client, {
-        Bucket: 'decentralized-fiver',
-        Key: `/fiver/${userId}/${Math.random()}/image.jpg`,
-        Conditions: [
-            ['content-length-range', 0, 5 * 1024 * 1024] // 5 MB max
-        ],
-        Fields: {
-            success_action_status: '201',
-            'Content-Type': 'image/jpg'
-        },
-        Expires: 3600
-    });
-    console.log({ url, fields });
-    res.json({
-        presignedUrl: url,
-        fields
-    });
+    try {
+        const { url, fields } = yield (0, s3_presigned_post_1.createPresignedPost)(s3Client, {
+            Bucket: 'decentralized-fiver',
+            Key: `/fiver/${userId}/${Math.random()}/image.jpg`,
+            Conditions: [
+                ['content-length-range', 0, 5 * 1024 * 1024] // 5 MB max
+            ],
+            Fields: {
+                success_action_status: '201',
+                'Content-Type': 'image/jpg'
+            },
+            Expires: 3600
+        });
+        console.log({ url, fields });
+        res.json({
+            presignedUrl: url,
+            fields
+        });
+    }
+    catch (e) {
+        console.log(e);
+    }
 }));
 exports.default = router;

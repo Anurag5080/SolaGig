@@ -173,25 +173,29 @@ router.get("/presignedUrl", authMiddleware, async (req, res) => {
     //@ts-ignore
     const userId = req.userId;
     
+      try{
+        const { url, fields } = await createPresignedPost(s3Client, {
+            Bucket: 'decentralized-fiver',
+            Key: `/fiver/${userId}/${Math.random()}/image.jpg`,
+            Conditions: [
+              ['content-length-range', 0, 5 * 1024 * 1024] // 5 MB max
+            ],
+            Fields: {
+              success_action_status: '201',
+              'Content-Type': 'image/jpg'
+            },
+            Expires: 3600
+          })
+          
+          console.log({ url, fields })
+        res.json({
+            presignedUrl : url ,
+            fields
+        })
+      }catch(e){
+        console.log(e)
+      }
       
-      const { url, fields } = await createPresignedPost(s3Client, {
-        Bucket: 'decentralized-fiver',
-        Key: `/fiver/${userId}/${Math.random()}/image.jpg`,
-        Conditions: [
-          ['content-length-range', 0, 5 * 1024 * 1024] // 5 MB max
-        ],
-        Fields: {
-          success_action_status: '201',
-          'Content-Type': 'image/jpg'
-        },
-        Expires: 3600
-      })
-      
-      console.log({ url, fields })
-    res.json({
-        presignedUrl : url ,
-        fields
-    })
 });
 
 export default router;

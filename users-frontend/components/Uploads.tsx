@@ -32,7 +32,11 @@ export function Uploads({onImageAdded, image} : {
             formData.append("file", file);
             
             const s3AxiosInstance = axios.create();
-            const awsresponse= await axios.post(presignedUrl, formData);
+            const awsresponse = await s3AxiosInstance.post(presignedUrl, formData, {
+                headers: {
+                    // Don't include any headers for S3 upload
+                }
+            });
             if (onImageAdded) {
                 onImageAdded(`${CloudFront_Url}/${response.data.fields["key"]}`);
             }
