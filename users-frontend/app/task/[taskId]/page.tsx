@@ -48,7 +48,7 @@ export default function Task ({
     return (
         <div className='text-2xl pt-20 flex justify-center'>
             <Appbar />
-            <div>
+            <div className="text-2xl p-20 flex justify-center">
                 {taskDetails.title}
             </div>
             <div className='flex justify-center pt-8'>
