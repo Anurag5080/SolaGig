@@ -9,7 +9,6 @@ export function Uploads({onImageAdded, image} : {
 }){
     const [uploading, setUploading] = useState(false);
 
-
     async function onFileSelect(e: any) {
         setUploading(true);
         try{
@@ -22,30 +21,36 @@ export function Uploads({onImageAdded, image} : {
 
             const presignedUrl = response.data.presignedUrl;
             const formData = new FormData();
-            formData.set("bucket", response.data.fields["bucket"])
-            formData.set("X-Amz-Algorithm", response.data.fields["X-Amz-Algorithm"]);
-            formData.set("X-Amz-Credential", response.data.fields["X-Amz-Credential"]);
-            formData.set("X-Amz-Date", response.data.fields["X-Amz-Date"]);
-            formData.set("key", response.data.fields["key"]);
-            formData.set("Policy", response.data.fields["Policy"]);
-            formData.set("X-Amz-Signature", response.data.fields["X-Amz-Signature"]);
-            formData.append("file", file);
             
-            const s3AxiosInstance = axios.create();
-            const awsresponse = await s3AxiosInstance.post(presignedUrl, formData, {
-                headers: {
-                    // Don't include any headers for S3 upload
-                }
+            // Add all fields from the presigned URL
+            Object.entries(response.data.fields).forEach(([key, value]) => {
+                formData.append(key, value as string);
             });
+            
+            // Add the file last
+            formData.append('file', file);
+            
+            // Make the upload request
+            const uploadResponse = await fetch(presignedUrl, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!uploadResponse.ok) {
+                throw new Error(`Upload failed: ${uploadResponse.statusText}`);
+            }
+
+            // Get the key from the fields
+            const key = response.data.fields.key;
             if (onImageAdded) {
-                onImageAdded(`${CloudFront_Url}/${response.data.fields["key"]}`);
+                onImageAdded(`${CloudFront_Url}/${key}`);
             }
 
         }catch(e){
-            console.log(e);
+            console.error("Upload error:", e);
+        }finally {
+            setUploading(false);
         }
-
-        setUploading(false);
     }
 
     if (image) {

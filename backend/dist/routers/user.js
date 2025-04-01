@@ -30,9 +30,9 @@ if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY || !pro
 const s3Client = new client_s3_1.S3Client({
     credentials: {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
     },
-    region: process.env.AWS_REGION
+    region: process.env.AWS_REGION,
 });
 //@ts-ignore
 router.get("/task", middleware_1.authMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -152,8 +152,8 @@ router.get("/presignedUrl", middleware_1.authMiddleware, (req, res) => __awaiter
     const userId = req.userId;
     try {
         const { url, fields } = yield (0, s3_presigned_post_1.createPresignedPost)(s3Client, {
-            Bucket: 'decentralized-fiver',
-            Key: `/fiver/${userId}/${Math.random()}/image.jpg`,
+            Bucket: 'solagigbucket',
+            Key: `${userId}/${Date.now()}/image.jpg`,
             Conditions: [
                 ['content-length-range', 0, 5 * 1024 * 1024] // 5 MB max
             ],
