@@ -29,8 +29,6 @@ model Worker{
   locked_amount Decimal
 }
 
-
-
 model Task{
   id         Int       @id @default(autoincrement())
   title      String?   @default("Select the most clickable Thumbnail")
@@ -51,8 +49,6 @@ model Options{
   submissions Submission[]
 }
 
-
-
 model Submission{
   id    Int    @id @default(autoincrement())
   worker_id  Int
@@ -65,7 +61,6 @@ model Submission{
   @@unique([worker_id, task_id]) //every submission is unique
 }
 
-
 model Payouts{
   id        Int     @id @default(autoincrement())
   user_id   Int
@@ -73,7 +68,6 @@ model Payouts{
   amount    Int
   signature  String
   status   TnxStatus
-
 }
 
 enum TnxStatus{

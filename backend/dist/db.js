@@ -11,7 +11,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getNewTask = void 0;
 const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+const extension_accelerate_1 = require("@prisma/extension-accelerate");
+const prisma = new client_1.PrismaClient().$extends((0, extension_accelerate_1.withAccelerate)());
 const getNewTask = (userId) => __awaiter(void 0, void 0, void 0, function* () {
     const task = yield prisma.task.findFirst({
         where: {

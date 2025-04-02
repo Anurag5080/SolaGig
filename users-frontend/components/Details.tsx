@@ -27,7 +27,7 @@ export const Details =()=>{
             }
         })
 
-        router.push(`${BackendUrl}/v1/user/task/${reponse.data.id}`)
+        router.push(`/task/${reponse.data.id}`)
         
     }
 
@@ -52,7 +52,7 @@ export const Details =()=>{
 
             {/* load and the shpwing of the data */}
             <div className="flex justify-center pt-4 max-w-screen-lg">
-            {images.map(image => <Uploads image={image} onImageAdded={(imageUrl) => {
+            {images.map(key => <Uploads image={key} onImageAdded={(imageUrl) => {
                     setImages(i => [...i, imageUrl]);
                 }} />)}
             </div>
@@ -67,7 +67,7 @@ export const Details =()=>{
                 <button
                 className="mt-4 text-white bg-gray-800 hover:bg-gray-900 focus:outline-none focus:ring-4 focus:ring-gray-300 font-medium rounded-full text-sm px-5 py-2.5 me-2 mb-2 dark:bg-gray-800 dark:hover:bg-gray-700 dark:focus:ring-gray-700 dark:border-gray-700"
                 type="button"
-                onClick={txSignature? onSubmit : makePayment}
+                onClick={onSubmit}
                 >
                     {txSignature? "Submit Task" : "Pay 0.1 Sol"}
                 </button>
