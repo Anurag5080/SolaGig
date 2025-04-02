@@ -27,7 +27,7 @@ export const Details =()=>{
             }
         })
 
-        router.push(`/task/${reponse.data.id}`)
+        router.push(`${BackendUrl}/v1/user/task/${reponse.data.id}`)
         
     }
 

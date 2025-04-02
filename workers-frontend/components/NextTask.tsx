@@ -2,7 +2,6 @@
 
 import { BackendUrl } from "@/utils";
 import axios from "axios";
-import { NextRequest } from "next/server";
 import { useEffect, useState } from "react"
 
 interface Task {
