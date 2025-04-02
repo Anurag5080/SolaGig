@@ -20,10 +20,10 @@ async function getTaskDetails(taskId: string){
 export default function Task ({
     params
 }: {
-    params :Promise<{taskId : string}>
+    params :{taskId : string}
 }){
 
-    const taskId = use(params);
+    const taskId = params.taskId;
     const [result, setResult] = useState<Record<string,{
         count: number,
         options:{
@@ -42,11 +42,14 @@ export default function Task ({
             setResult(data.result)
             setTaskDetails(data.taskDetails)
           })
+          .catch((error =>{
+            console.error("Error Fetching task details", error)
+          }))
     }, [taskId])
 
 
     return (
-        <div className='text-2xl pt-20 flex justify-center'>
+        <div className='text-2xl pt-2 flex flex-col'>
             <Appbar />
             <div className="text-2xl p-20 flex justify-center">
                 {taskDetails.title}
