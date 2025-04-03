@@ -19,18 +19,39 @@ export const NextTask =  ()=>{
     const [currentTask, setCurrentTask] = useState<Task | null>(null);
     const [loading , setLoading] = useState(false);
 
+    
     useEffect(()=>{
         setLoading(true)
-        axios.get(`${BackendUrl}/v1/worker/nextTask`,{
+        const token = localStorage.getItem("token");
+        
+        if (!token) {
+            console.error("No token found");
+            setLoading(false);
+            return;
+        }
+// Add this before the axios request to debug
+        console.log("Token:", localStorage.getItem("token"));
+        const response = axios.get(`${BackendUrl}/v1/worker/nextTask`,{
             headers:{
-                "Authorization" : localStorage.getItem("token")
+                "Authorization" : token
             }
-        })
+        })                                                                                                          
           .then(res =>{
-            setCurrentTask(res.data)
-            setLoading(false)
+            console.log(res.data)
+            setCurrentTask(res.data.task)
+            
           })
+          .catch(error => {
+            console.error("Error fetching task:", error);
+        })
+        
+        .finally(() => setLoading(false));
+        console.log(response);
+
     },[])
+    
+
+
 
     if(loading){
         return (
@@ -58,9 +79,10 @@ export const NextTask =  ()=>{
                     key={option.id}
                     imageUrl={option.image_url}
                     onSelect={async ()=>{
+                        console.log("Working fine");
                         const response = await axios.post(`${BackendUrl}/v1/worker/submission`,{
-                            taskId : currentTask.id,
-                            selection: option.id
+                            taskId : currentTask.id.toString(),
+                            selection: option.id.toString()
                         }, {
                             headers:{
                                 "Authorization" : localStorage.getItem("token")

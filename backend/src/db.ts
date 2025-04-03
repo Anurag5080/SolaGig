@@ -21,6 +21,7 @@ export const getNewTask = async(userId: number)=>{
             amount: true
         }
     })
-
     return task;
+
+    
 }

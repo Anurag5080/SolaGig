@@ -37,48 +37,67 @@ const s3Client = new client_s3_1.S3Client({
 //@ts-ignore
 router.get("/task", middleware_1.authMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const taskId = req.query.taskId;
+    console.log(taskId);
+    console.log(typeof taskId);
     //@ts-ignore
     const userId = req.userId;
-    const taskDetails = yield prisma.task.findFirst({
-        where: {
-            user_id: Number(userId),
-            id: Number(taskId)
-        },
-        include: {
-            options: true
-        }
-    });
-    if (!taskDetails) {
-        return res.status(411).json({
-            message: "You don't hace access to this task"
+    console.log(userId);
+    // Add error handling for taskId
+    if (!taskId) {
+        return res.status(400).json({
+            message: "Task ID is required"
         });
     }
-    const response = yield prisma.submission.findMany({
-        where: {
-            task_id: Number(taskId)
-        },
-        include: {
-            option: true
-        }
-    });
-    // Creates a record of all options with their counts
-    // First initializes all options with count 0
-    // Then counts actual submissions for each option
-    const result = {};
-    // Initialize counts for all options
-    taskDetails.options.forEach(option => {
-        result[option.id] = {
-            count: 0,
-            option: {
-                imageUrl: option.image_url
+    try {
+        const taskDetails = yield prisma.task.findFirst({
+            where: {
+                user_id: Number(userId),
+                id: Number(taskId) // Make sure taskId is converted to number
+            },
+            include: {
+                options: true
             }
-        };
-    });
-    // Count submissions for each option
-    response.forEach(r => {
-        result[r.option_id].count += 1;
-    });
-    res.json({ result });
+        });
+        console.log(taskDetails);
+        if (!taskDetails) {
+            return res.status(404).json({
+                message: "Task not found or you don't have access to this task"
+            });
+        }
+        const response = yield prisma.submission.findMany({
+            where: {
+                task_id: Number(taskId)
+            },
+            include: {
+                option: true
+            }
+        });
+        console.log(response);
+        // Create result object
+        const result = {};
+        taskDetails.options.forEach(option => {
+            result[option.id] = {
+                count: 0,
+                options: {
+                    imageUrl: option.image_url
+                }
+            };
+        });
+        // Count submissions
+        response.forEach(r => {
+            result[r.option_id].count += 1;
+        });
+        res.json({
+            result,
+            taskDetails // Include taskDetails in response
+        });
+    }
+    catch (error) {
+        console.error('Error fetching task:', error);
+        res.status(500).json({
+            message: "Internal server error"
+        });
+    }
 }));
 //task route
 //@ts-ignore

@@ -31,67 +31,86 @@ const s3Client = new S3Client({
 
 
 //@ts-ignore
-router.get("/task",authMiddleware,  async(req, res) => {
-    const taskId:  string = req.query.taskId as string;
+router.get("/task", authMiddleware, async(req, res) => {
+    const taskId = req.query.taskId;
+    console.log(taskId);
+    console.log(typeof taskId);
     //@ts-ignore
-    const userId: string = req.userId;
-
-    const taskDetails = await prisma.task.findFirst(
-        {
-            where:{
-                user_id: Number(userId),
-                id: Number(taskId)
-            },
-            include:{
-                options: true
-            }
-        }
-    )
+    const userId = req.userId;
+    console.log(userId);
 
 
-
-    if(!taskDetails){
-        return res.status(411).json({
-            message: "You don't hace access to this task"
-        })
+    // Add error handling for taskId
+    if (!taskId) {
+        return res.status(400).json({
+            message: "Task ID is required"
+        });
     }
 
-    const response = await prisma.submission.findMany({
-        where:{
-            task_id: Number(taskId)
-        }, 
-        include:{
-            option: true
+    try {
+        const taskDetails = await prisma.task.findFirst({
+            where: {
+                user_id: Number(userId),
+                id: Number(taskId)  // Make sure taskId is converted to number
+            },
+            include: {
+                options: true
+            }
+        });
+
+    console.log(taskDetails);
+        
+
+        if (!taskDetails) {
+            return res.status(404).json({
+                message: "Task not found or you don't have access to this task"
+            });
         }
-    });
-    // Creates a record of all options with their counts
-// First initializes all options with count 0
-// Then counts actual submissions for each option
 
-    const result: Record<string, {
-        count: number;
-        option: {
-            imageUrl: string;
-        }
-    }> = {};
+        const response = await prisma.submission.findMany({
+            where: {
+                task_id: Number(taskId)
+            },
+            include: {
+                option: true
+            }
+        });
 
-    // Initialize counts for all options
-    taskDetails.options.forEach(option => {
-        result[option.id] = {
-            count: 0,
-            option: {
-                imageUrl: option.image_url
-            }       
-        }
-    });
+        console.log(response);
 
-    // Count submissions for each option
-    response.forEach(r => {
-        result[r.option_id].count += 1;
-    });
+        // Create result object
+        const result: Record<number, {
+            count: number;
+            options: {
+                imageUrl: string;
+            }
+        }> = {};
 
-    res.json({result});
-})
+        taskDetails.options.forEach(option => {
+            result[option.id] = {
+                count: 0,
+                options: {  // Changed from 'option' to 'options' to match frontend expectation
+                    imageUrl: option.image_url
+                }
+            };
+        });
+
+        // Count submissions
+        response.forEach(r => {
+            result[r.option_id].count += 1;
+        });
+
+        res.json({
+            result,
+            taskDetails  // Include taskDetails in response
+        });
+    } catch (error) {
+        console.error('Error fetching task:', error);
+        res.status(500).json({
+            message: "Internal server error"
+        });
+    }
+});
 
 //task route
 //@ts-ignore
