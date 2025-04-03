@@ -17,7 +17,7 @@ async function getTaskDetails(taskId: string){
     return response.data;
 }
 
-export default function Task ({
+export default  function Task ({
     params
 }: {
     params :{taskId : string}

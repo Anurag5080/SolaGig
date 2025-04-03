@@ -8,7 +8,7 @@ export const Appbar = () => {
 
     const connectWallet = async () => {
         try {
-            const response=  await axios.post(`${BackendUrl}/v1/user/signin`,
+            const response=  await axios.post(`${BackendUrl}/v1/worker/signin`,
                 
             );
             localStorage.setItem("token", response.data.token);
