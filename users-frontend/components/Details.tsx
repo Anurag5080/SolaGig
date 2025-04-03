@@ -5,6 +5,10 @@ import { Uploads } from "./Uploads";
 import axios from 'axios'
 import {  useRouter } from "next/navigation";
 import { BackendUrl } from "@/utils";
+import { PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
+import { connection } from "next/server";
+import { useWallet, useConnection } from '@solana/wallet-adapter-react';
+
 
 
 
@@ -12,6 +16,8 @@ export const Details =()=>{
     const [title, setTitle] = useState("");
     const [images, setImages] = useState<string []>([]);
     const [txSignature, setTxSignature] = useState("");
+    const { publicKey, sendTransaction } = useWallet();
+    const { connection } = useConnection();
     const router = useRouter();
 
     async function onSubmit() {
@@ -31,8 +37,25 @@ export const Details =()=>{
         
     }
 
-    async function makePayment(){
+    async function makePayment() {
 
+        const transaction = new Transaction().add(
+            SystemProgram.transfer({
+                fromPubkey: publicKey!,
+                toPubkey: new PublicKey("FqZNHbTnU4NAeYys4vu329pTYHfqJzpq9R8cTZXCPcuG"),
+                lamports: 100000000,
+            })
+        );
+
+        const {
+            context: { slot: minContextSlot },
+            value: { blockhash, lastValidBlockHeight }
+        } = await connection.getLatestBlockhashAndContext();
+
+        const signature = await sendTransaction(transaction, connection, { minContextSlot });
+
+        await connection.confirmTransaction({ blockhash, lastValidBlockHeight, signature });
+        setTxSignature(signature);
     }
 
 
@@ -67,7 +90,7 @@ export const Details =()=>{
                 <button
                 className="mt-4 text-white bg-gray-800 hover:bg-gray-900 focus:outline-none focus:ring-4 focus:ring-gray-300 font-medium rounded-full text-sm px-5 py-2.5 me-2 mb-2 dark:bg-gray-800 dark:hover:bg-gray-700 dark:focus:ring-gray-700 dark:border-gray-700"
                 type="button"
-                onClick={onSubmit}
+                onClick={txSignature ? onSubmit : makePayment}
                 >
                     {txSignature? "Submit Task" : "Pay 0.1 Sol"}
                 </button>

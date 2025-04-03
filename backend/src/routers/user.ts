@@ -1,3 +1,5 @@
+
+import nacl from 'tweetnacl';
 import { PrismaClient } from "@prisma/client";
 import { Router, Request, Response, response } from "express";
 import jwt, { sign } from "jsonwebtoken";
@@ -9,10 +11,15 @@ import { authMiddleware } from "../middleware";
 import dotenv from "dotenv";
 import { createTaskInput } from "../types";
 import { ZodRecord } from "zod";
+import { Connection, PublicKey, Transaction } from "@solana/web3.js";
 dotenv.config();
 
 const router = Router();
 const prisma = new PrismaClient();
+
+const PARENT_WALLET_ADDRESS = "FqZNHbTnU4NAeYys4vu329pTYHfqJzpq9R8cTZXCPcuG";
+const connection = new Connection(process.env.RPC_URL ?? "");
+console.log("RCP URL", process.env.RPC_URL);
 
 if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY || !process.env.AWS_REGION) {
     throw new Error("Missing AWS environment variables");
@@ -120,9 +127,39 @@ router.post("/task", authMiddleware, async(req, res) =>{
     const body = req.body;
     const parsedData =  createTaskInput.safeParse(body);
 
+    const user = await prisma.user.findFirst({
+        where: {
+            id: userId
+        }
+    })
+
     if(!parsedData.success){
         return res.status(411).json({
             message: "Invalid input"
+        })
+    }
+
+    const transaction = await connection.getTransaction(parsedData.data.signature, {
+        maxSupportedTransactionVersion: 1
+    });
+
+    console.log(transaction);
+
+    if ((transaction?.meta?.postBalances[1] ?? 0) - (transaction?.meta?.preBalances[1] ?? 0) !== 100000000) {
+        return res.status(411).json({
+            message: "Transaction signature/amount incorrect"
+        })
+    }
+
+    if (transaction?.transaction.message.getAccountKeys().get(1)?.toString() !== PARENT_WALLET_ADDRESS) {
+        return res.status(411).json({
+            message: "Transaction sent to wrong address"
+        })
+    }
+
+    if (transaction?.transaction.message.getAccountKeys().get(0)?.toString() !== user?.address) {
+        return res.status(411).json({
+            message: "Transaction sent to wrong address"
         })
     }
 
@@ -156,10 +193,20 @@ router.post("/task", authMiddleware, async(req, res) =>{
 //sign in wth a msgg
 router.post("/signin", async(req, res)=>{
     //sign in verification logic
-    const hardcodedWalletAddress = "FqZNHbTnU4NAeYys4vu329pTYHfqJzpq9R8cTZXCPcuG";
+    const {publicKey, signature} = req.body;
+    const signedString = "Sign in to SolaGig";
+    const message = new TextEncoder().encode(signedString);
+    const result = nacl.sign.detached.verify(
+        message,
+        new Uint8Array(signature.data),
+        new PublicKey(publicKey).toBytes(),
+      );
+
+      console.log(result);
+
     const existingUser = await prisma.user.findFirst({
         where:{
-            address: hardcodedWalletAddress
+            address: publicKey
         }
     })
     if(existingUser){
@@ -174,7 +221,7 @@ router.post("/signin", async(req, res)=>{
     else{
         const user  = await prisma.user.create({
             data:{
-                address: hardcodedWalletAddress,
+                address: publicKey,
             }
         })
 

@@ -11,7 +11,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
+var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
+const tweetnacl_1 = __importDefault(require("tweetnacl"));
 const client_1 = require("@prisma/client");
 const express_1 = require("express");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
@@ -21,9 +23,13 @@ const config_1 = require("../config");
 const middleware_1 = require("../middleware");
 const dotenv_1 = __importDefault(require("dotenv"));
 const types_1 = require("../types");
+const web3_js_1 = require("@solana/web3.js");
 dotenv_1.default.config();
 const router = (0, express_1.Router)();
 const prisma = new client_1.PrismaClient();
+const PARENT_WALLET_ADDRESS = "FqZNHbTnU4NAeYys4vu329pTYHfqJzpq9R8cTZXCPcuG";
+const connection = new web3_js_1.Connection((_a = process.env.RPC_URL) !== null && _a !== void 0 ? _a : "");
+console.log("RCP URL", process.env.RPC_URL);
 if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY || !process.env.AWS_REGION) {
     throw new Error("Missing AWS environment variables");
 }
@@ -102,13 +108,38 @@ router.get("/task", middleware_1.authMiddleware, (req, res) => __awaiter(void 0,
 //task route
 //@ts-ignore
 router.post("/task", middleware_1.authMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b, _c, _d, _e, _f;
     //@ts-ignore
     const userId = req.userId;
     const body = req.body;
     const parsedData = types_1.createTaskInput.safeParse(body);
+    const user = yield prisma.user.findFirst({
+        where: {
+            id: userId
+        }
+    });
     if (!parsedData.success) {
         return res.status(411).json({
             message: "Invalid input"
+        });
+    }
+    const transaction = yield connection.getTransaction(parsedData.data.signature, {
+        maxSupportedTransactionVersion: 1
+    });
+    console.log(transaction);
+    if (((_b = (_a = transaction === null || transaction === void 0 ? void 0 : transaction.meta) === null || _a === void 0 ? void 0 : _a.postBalances[1]) !== null && _b !== void 0 ? _b : 0) - ((_d = (_c = transaction === null || transaction === void 0 ? void 0 : transaction.meta) === null || _c === void 0 ? void 0 : _c.preBalances[1]) !== null && _d !== void 0 ? _d : 0) !== 100000000) {
+        return res.status(411).json({
+            message: "Transaction signature/amount incorrect"
+        });
+    }
+    if (((_e = transaction === null || transaction === void 0 ? void 0 : transaction.transaction.message.getAccountKeys().get(1)) === null || _e === void 0 ? void 0 : _e.toString()) !== PARENT_WALLET_ADDRESS) {
+        return res.status(411).json({
+            message: "Transaction sent to wrong address"
+        });
+    }
+    if (((_f = transaction === null || transaction === void 0 ? void 0 : transaction.transaction.message.getAccountKeys().get(0)) === null || _f === void 0 ? void 0 : _f.toString()) !== (user === null || user === void 0 ? void 0 : user.address)) {
+        return res.status(411).json({
+            message: "Transaction sent to wrong address"
         });
     }
     //paerse the signatuer here to ensure the person paid thj money
@@ -137,10 +168,14 @@ router.post("/task", middleware_1.authMiddleware, (req, res) => __awaiter(void 0
 //sign in wth a msgg
 router.post("/signin", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     //sign in verification logic
-    const hardcodedWalletAddress = "FqZNHbTnU4NAeYys4vu329pTYHfqJzpq9R8cTZXCPcuG";
+    const { publicKey, signature } = req.body;
+    const signedString = "Sign in to SolaGig";
+    const message = new TextEncoder().encode(signedString);
+    const result = tweetnacl_1.default.sign.detached.verify(message, new Uint8Array(signature.data), new web3_js_1.PublicKey(publicKey).toBytes());
+    console.log(result);
     const existingUser = yield prisma.user.findFirst({
         where: {
-            address: hardcodedWalletAddress
+            address: publicKey
         }
     });
     if (existingUser) {
@@ -154,7 +189,7 @@ router.post("/signin", (req, res) => __awaiter(void 0, void 0, void 0, function*
     else {
         const user = yield prisma.user.create({
             data: {
-                address: hardcodedWalletAddress,
+                address: publicKey,
             }
         });
         const token = jsonwebtoken_1.default.sign({
