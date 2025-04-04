@@ -1,0 +1,1 @@
+export const privateKey = "3uRuugprPwQUqCxtysh6YHWRDAiX9TZYaffSxLNeAmy4kNPJxZntNyrQbX3gf9MpdGwSWCXT7Rc4qknqPTntAmQ6"

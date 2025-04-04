@@ -24,9 +24,11 @@ export const NextTask = () => {
 
     useEffect(() => {
         setLoading(true);
+        const token = localStorage.getItem("token");
+        console.log("Token:", token);
         const reponse =  axios.get(`${BackendUrl}/v1/worker/nextTask`, {
             headers: {
-                 "Authorization": `Bearer ${localStorage.getItem("token")}`
+                 "Authorization": `Bearer ${token}`
             }
             
         })
@@ -46,7 +48,7 @@ export const NextTask = () => {
     
     if (loading) {
         return <div className="h-screen flex justify-center flex-col">
-            <div className="w-full flex justify-center text-2xl">
+            <div className="w-full flex text-white justify-center text-2xl">
                 Loading...
             </div>
         </div>
@@ -54,8 +56,8 @@ export const NextTask = () => {
 
     if (!currentTask) {
         return <div className="h-screen flex justify-center flex-col">
-            <div className="w-full flex justify-center text-2xl">
-                Please check back in some time, there are no pending tasks at the momebt
+            <div className="w-full flex justify-center text-2xl text-white font-bold">
+                Please check back in some time, there are no pending tasks at the moment.
             </div>
         </div>
     }
@@ -63,7 +65,7 @@ export const NextTask = () => {
     return <div>
         <div className='text-2xl pt-20 flex justify-center'>
             {currentTask.title}
-            <div className="pl-4">
+            <div className="pl-4 text-white font-semibold">
                 {submitting && "Submitting..."}
             </div>
         </div>

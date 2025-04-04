@@ -13,6 +13,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.encodeImageFromS3 = encodeImageFromS3;
 const tweetnacl_1 = __importDefault(require("tweetnacl"));
 const client_1 = require("@prisma/client");
 const express_1 = require("express");
@@ -24,12 +25,13 @@ const middleware_1 = require("../middleware");
 const dotenv_1 = __importDefault(require("dotenv"));
 const types_1 = require("../types");
 const web3_js_1 = require("@solana/web3.js");
+const axios_1 = __importDefault(require("axios"));
 dotenv_1.default.config();
 const router = (0, express_1.Router)();
 const prisma = new client_1.PrismaClient();
+let latestAgentDescription = "";
 const PARENT_WALLET_ADDRESS = "FqZNHbTnU4NAeYys4vu329pTYHfqJzpq9R8cTZXCPcuG";
 const connection = new web3_js_1.Connection((_a = process.env.RPC_URL) !== null && _a !== void 0 ? _a : "");
-console.log("RCP URL", process.env.RPC_URL);
 if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY || !process.env.AWS_REGION) {
     throw new Error("Missing AWS environment variables");
 }
@@ -201,6 +203,76 @@ router.post("/signin", (req, res) => __awaiter(void 0, void 0, void 0, function*
     }
 }));
 //@ts-ignore
+// router.get("/presignedUrl", authMiddleware, async (req, res) => { 
+//     //@ts-ignore
+//     const userId = req.userId;
+//       try{
+//         const { url, fields } = await createPresignedPost(s3Client, {
+//             Bucket: 'solagigbucket',
+//             Key: `${userId}/${Date.now()}/image.jpg`,
+//             Conditions: [
+//               ['content-length-range', 0, 5 * 1024 * 1024] // 5 MB max
+//             ],
+//             Fields: {
+//               success_action_status: '201',
+//               'Content-Type': 'image/jpg'
+//             },
+//             Expires: 3600
+//           })
+//           console.log({ url, fields })
+//         res.json({
+//             presignedUrl : url ,
+//             fields
+//         })
+//       }catch(e){
+//         console.log(e)
+//       }
+// });
+function encodeImageFromS3(imageCloudUrl) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            const response = yield axios_1.default.get(imageCloudUrl, {
+                responseType: 'arraybuffer',
+            });
+            const contentType = response.headers['content-type'] || 'image/jpeg';
+            const base64 = Buffer.from(response.data).toString('base64');
+            const base64Image = `data:${contentType};base64,${base64}`;
+            return base64Image;
+        }
+        catch (error) {
+            console.error('Error encoding image:', error.message);
+            throw error;
+        }
+    });
+}
+function sendBase64ToAgentAI(prompt) {
+    return __awaiter(this, void 0, void 0, function* () {
+        var _a;
+        try {
+            const response = yield axios_1.default.post("https://api-lr.agent.ai/v1/agent/l4b14tzlj2ol54db/webhook/a354d68b", {
+                "user_input": prompt
+            }, {
+                headers: {
+                    Authorization: `Bearer ${process.env.AGENT_AI_AUTH_TOKEN}`,
+                    "Content-Type": "application/json"
+                }
+            });
+            return response.data;
+        }
+        catch (error) {
+            console.error("❌ Agent.AI API Error:", ((_a = error.response) === null || _a === void 0 ? void 0 : _a.data) || error.message);
+            throw error;
+        }
+    });
+}
+//@ts-ignore
+router.get("/agent-response", (req, res) => {
+    if (!latestAgentDescription) {
+        return res.status(404).json({ message: "No description available yet." });
+    }
+    res.json({ message: latestAgentDescription });
+});
+//@ts-ignore
 router.get("/presignedUrl", middleware_1.authMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     //@ts-ignore
     const userId = req.userId;
@@ -208,23 +280,39 @@ router.get("/presignedUrl", middleware_1.authMiddleware, (req, res) => __awaiter
         const { url, fields } = yield (0, s3_presigned_post_1.createPresignedPost)(s3Client, {
             Bucket: 'solagigbucket',
             Key: `${userId}/${Date.now()}/image.jpg`,
-            Conditions: [
-                ['content-length-range', 0, 5 * 1024 * 1024] // 5 MB max
-            ],
+            Conditions: [['content-length-range', 0, 5 * 1024 * 1024]],
             Fields: {
                 success_action_status: '201',
                 'Content-Type': 'image/jpg'
             },
             Expires: 3600
         });
-        console.log({ url, fields });
+        const imageURL = `${process.env.CLOUD_FRONT_URL}/${fields.key}`;
+        console.log("⏳ Waiting 3 seconds for CloudFront to be ready...");
+        // Delay and then encode + send to AgentAI
+        setTimeout(() => __awaiter(void 0, void 0, void 0, function* () {
+            try {
+                const base64Image = yield encodeImageFromS3(imageURL);
+                const agentResponse = yield sendBase64ToAgentAI(`Describe the image in exactly 30 words. Do not include any titles, labels, or extra characters. Output only the description—no introduction, no summary, no punctuation outside the description itself. ${base64Image}`);
+                latestAgentDescription = agentResponse.response;
+                console.log("🎯 AgentAI Response:", agentResponse);
+            }
+            catch (error) {
+                console.error("❌ Error after delay:", error.message);
+            }
+        }), 3000);
+        // Immediately return upload URL to frontend
         res.json({
             presignedUrl: url,
-            fields
+            fields,
+            cloudFrontUrl: imageURL
         });
     }
     catch (e) {
-        console.log(e);
+        console.error("❌ Error generating presigned URL:", e);
+        res.status(500).json({
+            message: "Error generating presigned URL"
+        });
     }
 }));
 exports.default = router;

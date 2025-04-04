@@ -49,9 +49,9 @@ export default  function Task ({
 
 
     return (
-        <div className='text-2xl pt-2 flex flex-col'>
+        <div className=' overflow-x-hidden p-2 pb-35 overflow-y-hidden  bg-[#0D0D0D] text-2xl flex flex-col'>
             <Appbar />
-            <div className="text-2xl p-20 flex justify-center">
+            <div className="text-2xl text-white font-bold pt-25 flex justify-center">
                 {taskDetails.title}
             </div>
             <div className='flex justify-center pt-8'>
@@ -74,7 +74,7 @@ export default  function Task ({
     }){
         return <div>
             <img className={"p-2 w-96 rounded-md"} src={imageUrl} alt="Task option" />
-            <div className='flex justify-center'>
+            <div className='flex text-white justify-center item-center font-semibold'>
                 {votes}
             </div>
         </div>
