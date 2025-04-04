@@ -37,7 +37,32 @@ export const Details =()=>{
         
     }
 
+    async function waitForConfirmation(signature: string) {
+        const maxRetries = 30;
+        let retry = 0;
+      
+        while (retry < maxRetries) {
+          const status = await connection.getSignatureStatus(signature, { searchTransactionHistory: true });
+          const confirmation = status?.value?.confirmationStatus;
+      
+          if (confirmation === "confirmed" || confirmation === "finalized") {
+            console.log("Transaction confirmed!");
+            return;
+          }
+      
+          retry++;
+          await new Promise((res) => setTimeout(res, 1000)); // Wait 1 second
+        }
+      
+        throw new Error("Transaction confirmation timed out.");
+      }
+      
+
     async function makePayment() {
+        if (!publicKey) {
+            console.error("Wallet not connected");
+            return;
+          }
 
         const transaction = new Transaction().add(
             SystemProgram.transfer({
@@ -47,6 +72,7 @@ export const Details =()=>{
             })
         );
 
+        console.log(transaction);
         const {
             context: { slot: minContextSlot },
             value: { blockhash, lastValidBlockHeight }
@@ -54,7 +80,11 @@ export const Details =()=>{
 
         const signature = await sendTransaction(transaction, connection, { minContextSlot });
 
-        await connection.confirmTransaction({ blockhash, lastValidBlockHeight, signature });
+        console.log("Transaction sent:", signature);
+
+        await waitForConfirmation(signature);
+
+        // await connection.confirmTransaction({ blockhash, lastValidBlockHeight, signature });
         setTxSignature(signature);
     }
 

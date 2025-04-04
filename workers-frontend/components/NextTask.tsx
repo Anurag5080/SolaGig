@@ -24,11 +24,13 @@ export const NextTask = () => {
 
     useEffect(() => {
         setLoading(true);
-        axios.get(`${BackendUrl}/v1/worker/nextTask`, {
+        const reponse =  axios.get(`${BackendUrl}/v1/worker/nextTask`, {
             headers: {
-                "Authorization": localStorage.getItem("token")
+                 "Authorization": `Bearer ${localStorage.getItem("token")}`
             }
+            
         })
+        
             .then(res => {
                 setCurrentTask(res.data.task);
                 setLoading(false)
@@ -37,7 +39,10 @@ export const NextTask = () => {
                 setLoading(false)
                 setCurrentTask(null)
             })
+    console.log(reponse);
+
     }, [])
+    console.log("currentTask", currentTask);
     
     if (loading) {
         return <div className="h-screen flex justify-center flex-col">
@@ -71,7 +76,7 @@ export const NextTask = () => {
                         selection: option.id.toString()
                     }, {
                         headers: {
-                            "Authorization": localStorage.getItem("token")
+                            "Authorization": `Bearer ${localStorage.getItem("token")}`
                         }
                     });
     

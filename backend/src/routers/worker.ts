@@ -6,6 +6,8 @@ import { workerMiddleware } from "../middleware";
 import { getNewTask } from "../db";
 import { createSubmissionInput } from "../types";
 import { warnOnce } from "@prisma/client/runtime/library";
+import nacl from "tweetnacl";
+import { PublicKey } from "@solana/web3.js";
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -16,10 +18,20 @@ const TOTAL_SUBMISSIONS = 10;
 
 router.post("/signin", async(req, res)=>{
     //sign in verification logic
-    const hardcodedWalletAddress = "FqZNHbTnU4NAeYys4vu329pTYHfqJzpq9R8cTZXCPcuG";
+    const {publicKey, signature} = req.body;
+    const signedString = "Sign in to SolaGig";
+    const message = new TextEncoder().encode(signedString);
+    const result = nacl.sign.detached.verify(
+        message,
+        new Uint8Array(signature.data),
+        new PublicKey(publicKey).toBytes(),
+      );
+
+      console.log(result);
+
     const existingUser = await prisma.worker.findFirst({
         where:{
-            address: hardcodedWalletAddress
+            address: publicKey
         }
     })
     if(existingUser){
@@ -34,7 +46,7 @@ router.post("/signin", async(req, res)=>{
     else{
         const user  = await prisma.worker.create({
             data:{
-                address: hardcodedWalletAddress,
+                address: publicKey,
                 pending_ammont: 0,
                 locked_amount:0
             }

@@ -19,15 +19,21 @@ const config_1 = require("../config");
 const middleware_1 = require("../middleware");
 const db_1 = require("../db");
 const types_1 = require("../types");
+const tweetnacl_1 = __importDefault(require("tweetnacl"));
+const web3_js_1 = require("@solana/web3.js");
 const router = (0, express_1.Router)();
 const prisma = new client_1.PrismaClient();
 const TOTAL_SUBMISSIONS = 10;
 router.post("/signin", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     //sign in verification logic
-    const hardcodedWalletAddress = "FqZNHbTnU4NAeYys4vu329pTYHfqJzpq9R8cTZXCPcuG";
+    const { publicKey, signature } = req.body;
+    const signedString = "Sign in to SolaGig";
+    const message = new TextEncoder().encode(signedString);
+    const result = tweetnacl_1.default.sign.detached.verify(message, new Uint8Array(signature.data), new web3_js_1.PublicKey(publicKey).toBytes());
+    console.log(result);
     const existingUser = yield prisma.worker.findFirst({
         where: {
-            address: hardcodedWalletAddress
+            address: publicKey
         }
     });
     if (existingUser) {
@@ -41,7 +47,7 @@ router.post("/signin", (req, res) => __awaiter(void 0, void 0, void 0, function*
     else {
         const user = yield prisma.worker.create({
             data: {
-                address: hardcodedWalletAddress,
+                address: publicKey,
                 pending_ammont: 0,
                 locked_amount: 0
             }
