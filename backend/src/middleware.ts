@@ -24,7 +24,7 @@ export function authMiddleware(req:Request, res: Response, next: NextFunction){
         
     }catch(e){
         return res.status(403).json({
-            message: "Invalid token"
+            message: "Invalid token, Try with correct username or password."
         })
     
     }
@@ -52,4 +52,5 @@ export function workerMiddleware(req: Request, res: Response, next: NextFunction
     }
 
 }
+
 
